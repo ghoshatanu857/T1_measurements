@@ -734,9 +734,9 @@ def data_save(root_directory,inside_folders,file_name,dict_args,averages,samples
     date = time.ctime()[4:10].replace(' ','_')
     current_time = time.ctime()[-13:-8].replace(':','_')
     
-    initial_path = os.path.join(root_directory, f'exp_data/{year}/{date}')
+    initial_path = os.path.join(root_directory, f'data/{year}/{date}')
     inside_path = os.path.join(initial_path, *inside_folders)
-    full_path = os.path.join(inside_path, f'avgs_{averages}', f'samples_{samples}')
+    full_path = os.path.join(inside_path, f'a_{averages}', f's_{samples}')
     if not os.path.exists(full_path):
         os.makedirs(full_path, exist_ok=True)
     
