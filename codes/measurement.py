@@ -732,7 +732,7 @@ def check_name(variable_name):
 def data_save(root_directory,inside_folders,file_name,dict_args,averages,samples):
     year = time.ctime()[-4:]
     date = time.ctime()[4:10].replace(' ','_')
-    current_time = time.ctime()[-13:-8].replace(':','_')
+    current_time = time.ctime()[-13:-5].replace(':','_')
     
     initial_path = os.path.join(root_directory, f'data/{year}/{date}')
     inside_path = os.path.join(initial_path, *inside_folders)
