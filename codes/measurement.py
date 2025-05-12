@@ -45,6 +45,9 @@ def give_sequence_time(pulser,exp_name,specifications):
         sequence_time=seqLifetime(pulser,**specifications)
     if exp_name.lower()=='t1_ir':
         sequence_time=seqT1_ir(pulser,**specifications)
+    if exp_name.lower()=='t1_new_timeScaled':
+        sequence_time=seqT1_new_timeScaled(pulser,**specifications)
+    
 
     return sequence_time
 
@@ -331,7 +334,7 @@ def seqT1(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen = 2e
         yield seq,[time,steps]
 
 # T1 Measurement Sequence
-def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen = 2e3, laserontime = 20e3,delay_pad = 100,delay_shift = 100e3,gatesourcedelay = 5,evolution_time = 5e6):  
+def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen = 2e3, laserontime = 20e3,delay_pad = 100,delay_shift = 100e3,gatesourcedelay = 5,evolution_time = 5e6,timeScaling ='geomspace'):  
     
     seq = pulser.createSequence()
    
@@ -340,17 +343,92 @@ def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen 
     source=7
     
     total_time= delay_pad+rising_delay+laserontime+rising_delay+laserontime+rising_delay+evolution_time+laserontime+rising_delay+delay_pad
-    steps=int(evolution_time/delay_shift)
-    
-    
-    for i in range(steps):
-        laser_offtime = total_time - delay_pad -3*rising_delay-3*laserontime-i*delay_shift
+    # steps=int(evolution_time/delay_shift)
+    total_steps=int(evolution_time/delay_shift)
+
+    if timeScaling =='geomspace':
+        time_steps = np.geomspace(rising_delay,rising_delay+evolution_time, num=total_steps, endpoint=True)
+    elif timeScaling =='linspace':
+        time_steps = np.linspace(rising_delay,rising_delay+evolution_time, num=total_steps, endpoint=True)
+
+    for i in time_steps:
+    # for i in range(steps):
+        laser_offtime = total_time - delay_pad -3*rising_delay-3*laserontime-i
+        # laser_offtime = total_time - delay_pad -3*rising_delay-3*laserontime-i*delay_shift
         seq.setDigital(
            laserNum,
            [
                (int(delay_pad+rising_delay), 0),
                (int(laserontime), 1),
-               (int(rising_delay+i*delay_shift),0),
+               (int(rising_delay+i),0),
+               # (int(rising_delay+i*delay_shift),0),
+               (int(laserontime), 1),
+               (int(rising_delay), 0),
+               (int(laserontime), 1),
+               (int(delay_pad+rising_delay), 0),
+
+           ],
+        )
+        gate_offtime = total_time - delay_pad -3*rising_delay-2*laserontime-gatelen-i
+        # gate_offtime = total_time - delay_pad -3*rising_delay-2*laserontime-gatelen-i*delay_shift
+        seq.setDigital(
+           gateStart,
+            [
+               (int(delay_pad+rising_delay), 0),
+               (int(laserontime), 0),
+               (int(rising_delay+i),0),
+               # (int(rising_delay+i*delay_shift),0),
+               (int(gatelen), 1),
+               (int(laserontime-gatelen+rising_delay), 0),
+               (int(gatelen), 1),
+               (int(laserontime-gatelen+delay_pad+rising_delay), 0),
+
+           ],
+        )
+        time = int(i)
+        # time = int(rising_delay+i*delay_shift)
+        
+        seq.setDigital(
+           source,
+            [
+               (int(delay_pad+rising_delay), 0),
+               (int(laserontime), 0),
+               (int(rising_delay+i),0),
+               # (int(rising_delay+i*delay_shift),0),
+               (int(gatelen-gatesourcedelay), 1),
+               (int(laserontime-gatelen+gatesourcedelay+rising_delay), 0),
+               (int(gatelen-gatesourcedelay), 1),
+               (int(delay_pad+rising_delay+laserontime-gatelen+gatesourcedelay), 0),
+
+           ],
+        )
+        yield seq,[time,total_steps]
+
+
+
+# T1 Measurement Sequence
+def seqT1_new_timeScaled(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen = 2e3, laserontime = 20e3,delay_pad = 100,delay_shift = 100e3,gatesourcedelay = 5,evolution_time = 5e6):  
+    
+    seq = pulser.createSequence()
+   
+    laserNum = 1
+    gateStart = 5
+    source=7
+    
+    total_time= delay_pad+rising_delay+laserontime+rising_delay+laserontime+rising_delay+evolution_time+laserontime+rising_delay+delay_pad
+    dark_time = rising_delay+evolution_time
+    total_steps=int(evolution_time/delay_shift)
+
+    time_steps = np.geomspace(rising_delay,dark_time, num=total_steps, endpoint=True)
+
+    for i in time_steps:
+        laser_offtime = total_time - delay_pad -3*rising_delay-3*laserontime-i
+        seq.setDigital(
+           laserNum,
+           [
+               (int(delay_pad+rising_delay), 0),
+               (int(laserontime), 1),
+               (int(rising_delay+i),0),
                (int(laserontime), 1),
                (int(rising_delay), 0),
                (int(laserontime), 1),
@@ -359,13 +437,13 @@ def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen 
            ],
         )
         
-        gate_offtime = total_time - delay_pad -3*rising_delay-2*laserontime-gatelen-i*delay_shift
+        gate_offtime = total_time - delay_pad -3*rising_delay-2*laserontime-gatelen-i
         seq.setDigital(
            gateStart,
             [
                (int(delay_pad+rising_delay), 0),
                (int(laserontime), 0),
-               (int(rising_delay+i*delay_shift),0),
+               (int(rising_delay+i),0),
                (int(gatelen), 1),
                (int(laserontime-gatelen+rising_delay), 0),
                (int(gatelen), 1),
@@ -374,14 +452,14 @@ def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen 
            ],
         )
         
-        time = int(rising_delay+i*delay_shift)
+        # time = int(rising_delay+time_steps)
         
         seq.setDigital(
            source,
             [
                (int(delay_pad+rising_delay), 0),
                (int(laserontime), 0),
-               (int(rising_delay+i*delay_shift),0),
+               (int(rising_delay+i),0),
                (int(gatelen-gatesourcedelay), 1),
                (int(laserontime-gatelen+gatesourcedelay+rising_delay), 0),
                (int(gatelen-gatesourcedelay), 1),
@@ -389,7 +467,7 @@ def seqT1_new(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen 
 
            ],
         )
-        yield seq,[time,steps]
+        yield seq,[i,total_steps]
 
 # T1 Measurement Sequence
 def seqT1_simple(pulser,laserNum=1,gateStart=5,source=7,rising_delay = 100,gatelen = 2e3, laserontime = 20e3,delay_pad = 100,delay_shift = 100e3,gatesourcedelay = 5,evolution_time = 5e6,first_time = 1e3):  
